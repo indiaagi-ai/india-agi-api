@@ -4,9 +4,12 @@ import {
   Query,
   Logger,
   BadRequestException,
+  Post,
+  Body,
 } from '@nestjs/common';
 import { ScraperService } from 'src/scraper/scraper.service';
 import { LlmService } from 'src/llm/llm.service';
+import { TestLLMRequestDto } from './interfaces/requests.dto';
 import { Provider } from 'src/llm/interfaces';
 
 @Controller('test')
@@ -37,10 +40,13 @@ export class TestController {
     }
   }
 
-  @Get('get-llm-response')
-  async getLLMResponse(@Query('message') message: string) {
+  @Post('get-llm-response')
+  async getLLMResponse(
+    @Query('provider') provider: Provider,
+    @Body() requestDto: TestLLMRequestDto,
+  ) {
     try {
-      return await this.llmService.getLLMResponse(Provider.OpenAI, message);
+      return await this.llmService.getLLMResponse(provider, requestDto.message);
     } catch (error) {
       this.logger.error((error as Error).message);
       throw new BadRequestException('Something bad happened', {
