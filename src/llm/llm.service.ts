@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Provider } from './interfaces';
-import { LanguageModelV1, streamText } from 'ai';
+import { CoreMessage, LanguageModelV1, streamText } from 'ai';
 import { createOpenAI, OpenAIProvider } from '@ai-sdk/openai';
 import { createAnthropic, AnthropicProvider } from '@ai-sdk/anthropic';
 import { createXai, XaiProvider } from '@ai-sdk/xai';
@@ -26,7 +26,7 @@ export class LlmService {
     });
   }
 
-  async getLLMResponse(provider: Provider, message: string) {
+  async getLLMResponse(provider: Provider, messages: CoreMessage[]) {
     let model: LanguageModelV1;
     switch (provider) {
       case Provider.OpenAI:
@@ -47,16 +47,7 @@ export class LlmService {
     try {
       const { textStream } = streamText({
         model,
-        messages: [
-          {
-            role: 'system',
-            content: 'you are an helpful AI assistant',
-          },
-          {
-            role: 'user',
-            content: message,
-          },
-        ],
+        messages: messages,
         temperature: 0.7,
       });
 

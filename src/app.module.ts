@@ -6,6 +6,7 @@ import { HttpModule } from '@nestjs/axios';
 import { TestController } from './test/test.controller';
 import { LlmModule } from './llm/llm.module';
 import { ConfigModule } from '@nestjs/config';
+import { GoogleModule } from './google/google.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ConfigModule } from '@nestjs/config';
     HttpModule,
     ScraperModule,
     LlmModule,
+    GoogleModule,
   ],
   controllers: [TestController],
   providers: [AppService],
