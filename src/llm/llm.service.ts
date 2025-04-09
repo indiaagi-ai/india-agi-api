@@ -1,10 +1,14 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Provider } from './interfaces';
-import { CoreMessage, LanguageModelV1, streamText } from 'ai';
+import { CoreMessage, LanguageModelV1, generateText, ToolSet } from 'ai';
 import { createOpenAI, OpenAIProvider } from '@ai-sdk/openai';
 import { createAnthropic, AnthropicProvider } from '@ai-sdk/anthropic';
 import { createXai, XaiProvider } from '@ai-sdk/xai';
+import {
+  createGoogleGenerativeAI,
+  GoogleGenerativeAIProvider,
+} from '@ai-sdk/google';
 
 @Injectable()
 export class LlmService {
@@ -12,6 +16,7 @@ export class LlmService {
   private openai: OpenAIProvider;
   private anthropic: AnthropicProvider;
   private xai: XaiProvider;
+  private google: GoogleGenerativeAIProvider;
 
   constructor(private readonly configService: ConfigService) {
     this.logger = new Logger(LlmService.name);
@@ -19,14 +24,21 @@ export class LlmService {
       apiKey: this.configService.getOrThrow('OPENAI_API_KEY'),
     });
     this.anthropic = createAnthropic({
-      apiKey: '',
+      apiKey: this.configService.getOrThrow('ANTHROPIC_API_KEY'),
     });
     this.xai = createXai({
-      apiKey: '',
+      apiKey: this.configService.getOrThrow('XAI_API_KEY'),
+    });
+    this.google = createGoogleGenerativeAI({
+      apiKey: this.configService.getOrThrow('GOOGLEAI_API_KEY'),
     });
   }
 
-  async getLLMResponse(provider: Provider, messages: CoreMessage[]) {
+  async getLLMResponse(
+    provider: Provider,
+    messages: CoreMessage[],
+    tools: ToolSet | undefined = undefined,
+  ) {
     let model: LanguageModelV1;
     switch (provider) {
       case Provider.OpenAI:
@@ -38,28 +50,28 @@ export class LlmService {
       case Provider.xAI:
         model = this.xai('grok-2-1212');
         break;
+      case Provider.Google:
+        model = this.google('gemini-1.5-flash');
+        break;
       default:
         throw new BadRequestException(
-          `please check the provider name (accepted values are ${Provider.OpenAI}, ${Provider.Anthropic}, ${Provider.xAI})`,
+          `please check the provider name (accepted values are ${Provider.OpenAI}, ${Provider.Anthropic}, ${Provider.xAI}, ${Provider.Google})`,
         );
     }
 
     try {
-      const { textStream } = streamText({
+      const response = await generateText({
         model,
-        messages: messages,
+        messages,
         temperature: 0.7,
+        tools,
+        maxSteps: 5,
       });
 
-      const responseText: string[] = [];
+      const responseText = response.text;
 
-      for await (const textPart of textStream) {
-        this.logger.verbose(textPart);
-        responseText.push(textPart);
-      }
-
-      if (responseText.join('').length > 0) {
-        return responseText.join('');
+      if (responseText.length > 0) {
+        return responseText;
       } else
         throw new BadRequestException(
           `error generating response for provider: ${provider.toString()}`,
