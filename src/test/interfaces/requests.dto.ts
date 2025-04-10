@@ -25,3 +25,21 @@ export class GoogleSearchRequestDto {
   @IsInt()
   pageNumber: number;
 }
+
+export class CollaborativeLLMRequestDto {
+  @ApiProperty({
+    example: 'What is the best approach to solve climate change?',
+    description: 'The question or topic for the LLMs to debate',
+  })
+  @IsString()
+  @IsNotEmpty()
+  question: string;
+
+  @ApiProperty({
+    example: 3,
+    description: 'Number of debate rounds between the LLMs',
+  })
+  @IsInt()
+  @IsNotEmpty()
+  rounds: number;
+}

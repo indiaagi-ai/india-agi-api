@@ -1,6 +1,6 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
-import { AxiosError, AxiosResponse } from 'axios';
+import { AxiosResponse } from 'axios';
 import * as cheerio from 'cheerio';
 import { NodeHtmlMarkdown } from 'node-html-markdown';
 
@@ -24,14 +24,10 @@ export class ScraperService {
           timeout: 10000, // 10 seconds timeout
         });
       return response.data;
-    } catch (error) {
-      const axiosError: AxiosError = error as AxiosError;
+    } catch {
       // Handle errors properly
-      this.logger.error(
-        `Failed to fetch HTML from ${pageURL}:`,
-        axiosError.message,
-      );
-      throw new Error(`Failed to fetch HTML: ${axiosError.message}`);
+      this.logger.error(`Failed to fetch HTML from ${pageURL}`);
+      throw new Error(`Failed to fetch HTML`);
     }
   }
 

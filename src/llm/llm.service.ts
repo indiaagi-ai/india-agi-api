@@ -51,7 +51,7 @@ export class LlmService {
         model = this.xai('grok-2-1212');
         break;
       case Provider.Google:
-        model = this.google('gemini-1.5-flash');
+        model = this.google('gemini-2.0-flash-lite-preview-02-05');
         break;
       default:
         throw new BadRequestException(
@@ -65,12 +65,14 @@ export class LlmService {
         messages,
         temperature: 0.7,
         tools,
-        maxSteps: 5,
+        maxSteps: 10,
+        maxTokens: 3000,
       });
 
       const responseText = response.text;
 
       if (responseText.length > 0) {
+        this.logger.log(`${provider}: ${responseText}`);
         return responseText;
       } else
         throw new BadRequestException(

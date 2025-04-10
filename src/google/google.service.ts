@@ -22,7 +22,7 @@ export class GoogleService {
       q: `${searchQuery} filetype:html`,
       key: this.config.getOrThrow('GOOGLE_API_KEY'),
       cx: this.config.getOrThrow('GOOGLE_SEARCH_ENGINE_ID'),
-      start: pageNumber * 10 + 1,
+      start: pageNumber * 3 + 1,
     };
 
     const response: AxiosResponse<SearchResponse> =
@@ -48,9 +48,7 @@ export class GoogleService {
               item.snippet,
             content: markdown,
           };
-        } catch (error) {
-          console.error(`Error scraping ${item.link}:`, error);
-
+        } catch {
           // Fallback content if scraping fails
           return {
             title: item.pagemap?.metatags?.[0]?.['og:title'] ?? item.title,
@@ -64,9 +62,12 @@ export class GoogleService {
       }),
     );
 
-    this.logger.verbose(
-      `\ngoogle search response: ${JSON.stringify(response.data.items, null, 2)}`,
-    );
+    const googleSearchResponseString: string[] = [];
+    googleSearchResponseString.push('Search Results:\n');
+    response.data.items.forEach((item) => {
+      googleSearchResponseString.push(`${item.title}: ${item.link}\n`);
+    });
+    this.logger.verbose(googleSearchResponseString.join());
     return response.data.items;
   }
 }
