@@ -140,7 +140,7 @@ export class TestController {
     try {
       const providers = [Provider.OpenAI, Provider.Google];
       const debateHistory: DebateHistory[] = [];
-      let currentQuestion = requestDto.question;
+      const currentQuestion = requestDto.question;
       const currentDate = new Date().toISOString().split('T')[0];
 
       for (let round = 0; round < requestDto.rounds; round++) {
