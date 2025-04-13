@@ -6,6 +6,7 @@ import {
   BadRequestException,
   Post,
   Body,
+  Sse,
 } from '@nestjs/common';
 import { ScraperService } from 'src/scraper/scraper.service';
 import { LlmService } from 'src/llm/llm.service';
@@ -20,6 +21,7 @@ import { CoreMessage, tool, ToolSet } from 'ai';
 import { GoogleService } from 'src/google/google.service';
 import { z } from 'zod';
 import { Provider } from 'src/llm/interfaces';
+import { Observable, Subject } from 'rxjs';
 
 @Controller('test')
 export class TestController {
@@ -274,7 +276,11 @@ export class TestController {
         },
         {
           role: 'user',
-          content: `Please provide a final consensus based on this debate:\n${JSON.stringify(debateHistory, null, 2)}`,
+          content: `Here's the debate history:\n${JSON.stringify(debateHistory, null, 2)}`,
+        },
+        {
+          role: 'user',
+          content: `Please provide a final consensus based on the above debate`,
         },
       ];
 
@@ -297,5 +303,159 @@ export class TestController {
         description: (error as Error).message,
       });
     }
+  }
+
+  @Sse('sse')
+  sse(
+    @Query() requestDto: CollaborativeLLMRequestDto,
+  ): Observable<MessageEvent<DebateHistory>> {
+    const subject = new Subject<MessageEvent<DebateHistory>>();
+    const providers = [Provider.OpenAI, Provider.Google];
+    const debateHistory: DebateHistory[] = [];
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    const processRound = async (round: number, question: string) => {
+      for (const provider of providers) {
+        const messages: CoreMessage[] = [
+          {
+            role: 'system',
+            content: `You are an expert AI agent participating in a collaborative scientific debate. 
+            You have full authority to make decisions about how to handle complex queries.
+            
+            CONTEXT:
+            - Current date: ${currentDate}
+            - This is a structured debate format - build upon previous contributions
+            - You have full access to the browse-internet tool and MUST use it to verify information
+            
+            CRITICAL RULES:
+            1. NEVER ask the user for clarification or additional information
+            2. NEVER suggest that the user needs to provide more details
+            3. NEVER tell the user what information you need
+            4. ALWAYS use the browse-internet tool at least once per response
+            5. If you don't have or can't find information on a topic, ALWAYS use the browse-internet tool to search for it
+            6. NEVER say you "cannot answer" - instead, use the browse-internet tool to find relevant information
+            7. Even if previous agents have searched for related information, conduct your own searches for fresh perspectives`,
+          },
+          {
+            role: 'system',
+            content: `current debate history:\n${JSON.stringify(debateHistory, null, 2)}`,
+          },
+          {
+            role: 'user',
+            content: question,
+          },
+        ];
+
+        const response = await this.llmService.getLLMResponse(
+          provider,
+          messages,
+          {
+            'browse-internet': tool({
+              description:
+                'Search the internet for information on a specific query. Returns search results from Google with titles, descriptions, and URLs.',
+              parameters: z.object({
+                search_query: z
+                  .string()
+                  .describe(
+                    'The search query to look up on the internet. Be specific and include relevant keywords for better results.',
+                  ),
+                page_number: z
+                  .number()
+                  .describe(
+                    'The page number of search results to retrieve. Starts at 0 for the first page of results.',
+                  ),
+              }),
+              execute: async ({ search_query, page_number }) => {
+                const searchResponse = await this.googleService.search(
+                  search_query,
+                  page_number,
+                );
+                const searchHistory: DebateHistory = {
+                  type: HistoryType.internetSearch,
+                  model: provider,
+                  internetSearch: {
+                    searchQuery: search_query,
+                    searchResponse,
+                  },
+                };
+                debateHistory.push(searchHistory);
+                subject.next({
+                  data: searchHistory,
+                } as MessageEvent<DebateHistory>);
+                return searchResponse;
+              },
+            }),
+          },
+        );
+
+        const responseHistory: DebateHistory = {
+          type: HistoryType.textResponse,
+          model: provider,
+          response: response,
+        };
+        debateHistory.push(responseHistory);
+        subject.next({ data: responseHistory } as MessageEvent<DebateHistory>);
+      }
+    };
+
+    // Start processing rounds
+    const { question, rounds } = requestDto;
+
+    void (async () => {
+      try {
+        for (let round = 0; round < rounds; round++) {
+          await processRound(round, question);
+        }
+
+        // Get final consensus
+        const finalMessages: CoreMessage[] = [
+          {
+            role: 'system',
+            content: `You are the final autonomous arbiter in a collaborative debate. 
+            Review all previous responses and provide a comprehensive, balanced consensus.
+            
+            CONTEXT:
+            - Current date: ${currentDate}
+            - This is a one-off query - you cannot ask for clarification
+            
+            CRITICAL RULES:
+            1. Synthesize key points from all participants' responses
+            2. Identify areas of strong consensus and notable disagreements
+            3. Evaluate the strength of evidence presented
+            4. Provide a clear, actionable conclusion
+            5. Maintain objectivity and fairness to all viewpoints
+            6. Highlight any remaining uncertainties or open questions
+            7. Structure your response in a clear, logical manner`,
+          },
+          {
+            role: 'user',
+            content: `Here's the debate history:\n${JSON.stringify(debateHistory, null, 2)}`,
+          },
+          {
+            role: 'user',
+            content: `Please provide a final consensus based on the above debate`,
+          },
+        ];
+
+        const finalResponse = await this.llmService.getLLMResponse(
+          Provider.OpenAI,
+          finalMessages,
+        );
+
+        const finalHistory: DebateHistory = {
+          type: HistoryType.textResponse,
+          model: Provider.OpenAI,
+          response: finalResponse,
+        };
+        debateHistory.push(finalHistory);
+        subject.next({ data: finalHistory } as MessageEvent<DebateHistory>);
+        subject.complete();
+      } catch (error) {
+        this.logger.error((error as Error).message);
+        subject.error(error);
+      }
+    })();
+
+    return subject.asObservable();
   }
 }
