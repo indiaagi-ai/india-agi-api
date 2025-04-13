@@ -4,6 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { AxiosResponse } from 'axios';
 import { ScraperService } from 'src/scraper/scraper.service';
+import { LlmService } from 'src/llm/llm.service';
+import { Provider } from 'src/llm/interfaces';
 
 @Injectable()
 export class GoogleService {
@@ -12,6 +14,7 @@ export class GoogleService {
     private readonly config: ConfigService,
     private readonly httpService: HttpService,
     private readonly scraperService: ScraperService,
+    private readonly llmService: LlmService,
   ) {
     this.logger = new Logger(GoogleService.name);
   }
@@ -39,6 +42,10 @@ export class GoogleService {
           const html = await this.scraperService.getHtmlContent(item.link);
           const cleaned = this.scraperService.cleanHtmlContent(html);
           const markdown = this.scraperService.convertHtmlToMarkdown(cleaned);
+          const summary =
+            markdown.length > 0
+              ? await this.llmService.generateSummary(Provider.OpenAI, markdown)
+              : '';
 
           return {
             title: item.pagemap?.metatags?.[0]?.['og:title'] ?? item.title,
@@ -46,7 +53,7 @@ export class GoogleService {
             snippet:
               item.pagemap?.metatags?.[0]?.['twitter:description'] ??
               item.snippet,
-            content: markdown,
+            content: summary,
           };
         } catch {
           // Fallback content if scraping fails
@@ -62,12 +69,19 @@ export class GoogleService {
       }),
     );
 
+    response.data.items = response.data.items.filter(
+      (item) =>
+        item.content !== null &&
+        item.content !== undefined &&
+        item.content.length !== 0,
+    );
+
     const googleSearchResponseString: string[] = [];
     googleSearchResponseString.push('Search Results:\n');
     response.data.items.forEach((item) => {
       googleSearchResponseString.push(`${item.title}: ${item.link}\n`);
     });
-    this.logger.verbose(googleSearchResponseString.join());
+    this.logger.verbose(googleSearchResponseString.join('\n'));
     return response.data.items;
   }
 }

@@ -1,14 +1,26 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Provider } from './interfaces';
-import { CoreMessage, LanguageModelV1, generateText, ToolSet } from 'ai';
-import { createOpenAI, OpenAIProvider } from '@ai-sdk/openai';
+import {
+  CoreMessage,
+  LanguageModelV1,
+  generateText,
+  generateObject,
+  ToolSet,
+} from 'ai';
+import {
+  createOpenAI,
+  OpenAIProvider,
+  OpenAIResponsesProviderOptions,
+} from '@ai-sdk/openai';
 import { createAnthropic, AnthropicProvider } from '@ai-sdk/anthropic';
 import { createXai, XaiProvider } from '@ai-sdk/xai';
 import {
   createGoogleGenerativeAI,
   GoogleGenerativeAIProvider,
 } from '@ai-sdk/google';
+import { createGroq, GroqProvider } from '@ai-sdk/groq';
+import { z } from 'zod';
 
 @Injectable()
 export class LlmService {
@@ -17,6 +29,7 @@ export class LlmService {
   private anthropic: AnthropicProvider;
   private xai: XaiProvider;
   private google: GoogleGenerativeAIProvider;
+  private groq: GroqProvider;
 
   constructor(private readonly configService: ConfigService) {
     this.logger = new Logger(LlmService.name);
@@ -31,6 +44,9 @@ export class LlmService {
     });
     this.google = createGoogleGenerativeAI({
       apiKey: this.configService.getOrThrow('GOOGLEAI_API_KEY'),
+    });
+    this.groq = createGroq({
+      apiKey: this.configService.getOrThrow('GROQ_API_KEY'),
     });
   }
 
@@ -51,12 +67,11 @@ export class LlmService {
         model = this.xai('grok-2-1212');
         break;
       case Provider.Google:
-        model = this.google('gemini-2.0-flash-lite-preview-02-05');
+        model = this.google('gemini-2.0-flash-lite-preview-02-05', {});
         break;
-      default:
-        throw new BadRequestException(
-          `please check the provider name (accepted values are ${Provider.OpenAI}, ${Provider.Anthropic}, ${Provider.xAI}, ${Provider.Google})`,
-        );
+      case Provider.Groq:
+        model = this.groq('llama-3.1-8b-instant');
+        break;
     }
 
     try {
@@ -65,10 +80,13 @@ export class LlmService {
         messages,
         temperature: 0.7,
         tools,
-        maxSteps: 10,
-        maxTokens: 3000,
+        maxSteps: 5,
+        providerOptions: {
+          openai: {
+            parallelToolCalls: false,
+          } satisfies OpenAIResponsesProviderOptions,
+        },
       });
-
       const responseText = response.text;
 
       if (responseText.length > 0) {
@@ -76,11 +94,50 @@ export class LlmService {
         return responseText;
       } else
         throw new BadRequestException(
-          `error generating response for provider: ${provider.toString()}`,
+          `empty response from LLM: ${provider.toString()}`,
         );
     } catch (ex) {
       this.logger.error('error generating response', (ex as Error).message);
       throw new BadRequestException((ex as Error).message);
+    }
+  }
+
+  async generateSummary(provider: Provider, content: string) {
+    let model: LanguageModelV1;
+
+    switch (provider) {
+      case Provider.OpenAI:
+        model = this.openai('gpt-4o-mini');
+        break;
+      case Provider.Anthropic:
+        model = this.anthropic('claude-3-7-sonnet-20250219');
+        break;
+      case Provider.xAI:
+        model = this.xai('grok-2-1212');
+        break;
+      case Provider.Google:
+        model = this.google('gemini-2.0-flash-lite-preview-02-05', {});
+        break;
+      case Provider.Groq:
+        model = this.groq('llama3-8b-8192');
+        break;
+    }
+
+    try {
+      const response = await generateObject({
+        model,
+        schema: z.object({
+          summary: z
+            .string()
+            .describe('A concise summary of the provided content'),
+        }),
+        prompt: `Generate a summary of the following content:\n\n ${content}`,
+      });
+
+      return response.object.summary;
+    } catch (error) {
+      this.logger.error('Error generating summary:', error);
+      throw new Error('Failed to generate content summary');
     }
   }
 }

@@ -3,4 +3,5 @@ export enum Provider {
   Anthropic = 'Anthropic',
   Google = 'Google',
   xAI = 'xAI',
+  Groq = 'Groq',
 }

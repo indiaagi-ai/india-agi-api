@@ -26,8 +26,8 @@ export class ScraperService {
       return response.data;
     } catch {
       // Handle errors properly
-      this.logger.error(`Failed to fetch HTML from ${pageURL}`);
-      throw new Error(`Failed to fetch HTML`);
+      this.logger.verbose(`Failed to fetch HTML from ${pageURL}`);
+      return '';
     }
   }
 
