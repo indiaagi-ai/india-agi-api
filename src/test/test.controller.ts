@@ -4,8 +4,6 @@ import {
   Query,
   Logger,
   BadRequestException,
-  Post,
-  Body,
   Sse,
 } from '@nestjs/common';
 import { ScraperService } from 'src/scraper/scraper.service';
@@ -135,176 +133,6 @@ export class TestController {
     }
   }
 
-  @Post('collaborative-llm')
-  async getCollaborativeLLMResponse(
-    @Body() requestDto: CollaborativeLLMRequestDto,
-  ) {
-    try {
-      const providers = [Provider.OpenAI, Provider.Google];
-      const debateHistory: DebateHistory[] = [];
-      const currentQuestion = requestDto.question;
-      const currentDate = new Date().toISOString().split('T')[0];
-
-      for (let round = 0; round < requestDto.rounds; round++) {
-        // Get responses from all providers
-        for (const provider of providers) {
-          const messages: CoreMessage[] = [
-            {
-              role: 'system',
-              content: `You are an expert AI agent participating in a collaborative scientific debate. 
-              You have full authority to make decisions about how to handle complex queries.
-              
-              CONTEXT:
-              - Current date: ${currentDate}
-              - This is a structured debate format - build upon previous contributions
-              - You have full access to the browse-internet tool and MUST use it to verify information
-              
-              CRITICAL RULES:
-              1. NEVER ask the user for clarification or additional information
-              2. NEVER suggest that the user needs to provide more details
-              3. NEVER tell the user what information you need
-              4. ALWAYS use the browse-internet tool at least once per response
-              5. If you don't have or can't find information on a topic, ALWAYS use the browse-internet tool to search for it
-              6. NEVER say you "cannot answer" - instead, use the browse-internet tool to find relevant information
-              7. Even if previous agents have searched for related information, conduct your own searches for fresh perspectives
-              
-              SEARCH TOOL USAGE (MANDATORY):
-              1. For EVERY response, use the browse-internet tool at least once with a specific, targeted search query
-              2. Craft unique search queries that go beyond what previous participants have already searched
-              3. If uncertain about any fact or claim, immediately search to verify it
-              4. For each major section of your response, conduct at least one relevant search
-              5. After searching, explicitly incorporate the new information into your response with proper attribution
-              
-              RESEARCH METHODOLOGY:
-              1. Formulate specific search queries that will yield relevant, high-quality information
-              2. Use multiple searches to cover different aspects of the topic
-              3. Always verify facts across multiple sources before inclusion
-              4. Distinguish between scientific consensus and speculative claims
-              5. Prioritize recent, peer-reviewed research when available
-              
-              RESPONSE STRUCTURE:
-              1. Begin with a concise summary of the current scientific understanding
-              2. Present information in a logical, hierarchical manner with clear section headings
-              3. Directly address the core question with depth and nuance
-              4. Acknowledge limitations and uncertainties in current knowledge
-              5. Properly attribute information to specific sources using inline citations
-              6. For scientific topics, follow the principle: extraordinary claims require extraordinary evidence
-              7. Conclude with a synthesis that captures the most important considerations
-              
-              DEBATE PROGRESSION:
-              1. Build upon valuable insights from other participants
-              2. Identify and address gaps or weaknesses in previous contributions
-              3. Introduce new perspectives and evidence not yet considered
-              4. Focus on adding novel information rather than repeating established points
-              5. Use your fresh searches to bring new evidence into the debate`,
-            },
-            {
-              role: 'system',
-              content: `current debate history:\n${JSON.stringify(debateHistory, null, 2)}`,
-            },
-            {
-              role: 'user',
-              content: currentQuestion,
-            },
-          ];
-
-          const response = await this.llmService.getLLMResponse(
-            provider,
-            messages,
-            {
-              'browse-internet': tool({
-                description:
-                  'Search the internet for information on a specific query. Returns search results from Google with titles, descriptions, and URLs.',
-                parameters: z.object({
-                  search_query: z
-                    .string()
-                    .describe(
-                      'The search query to look up on the internet. Be specific and include relevant keywords for better results.',
-                    ),
-                  page_number: z
-                    .number()
-                    .describe(
-                      'The page number of search results to retrieve. Starts at 0 for the first page of results.',
-                    ),
-                }),
-                execute: async ({ search_query, page_number }) => {
-                  const searchResponse = await this.googleService.search(
-                    search_query,
-                    page_number,
-                  );
-                  debateHistory.push({
-                    type: HistoryType.internetSearch,
-                    model: provider,
-                    internetSearch: {
-                      searchQuery: search_query,
-                      searchResponse,
-                    },
-                  });
-                  return searchResponse;
-                },
-              }),
-            },
-          );
-
-          debateHistory.push({
-            type: HistoryType.textResponse,
-            model: provider,
-            response: response,
-          });
-        }
-      }
-
-      // Get final consensus
-      const finalMessages: CoreMessage[] = [
-        {
-          role: 'system',
-          content: `You are the final autonomous arbiter in a collaborative debate. 
-          Review all previous responses and provide a comprehensive, balanced consensus.
-          
-          CONTEXT:
-          - Current date: ${currentDate}
-          - This is a one-off query - you cannot ask for clarification
-          
-          CRITICAL RULES:
-          1. Synthesize key points from all participants' responses
-          2. Identify areas of strong consensus and notable disagreements
-          3. Evaluate the strength of evidence presented
-          4. Provide a clear, actionable conclusion
-          5. Maintain objectivity and fairness to all viewpoints
-          6. Highlight any remaining uncertainties or open questions
-          7. Structure your response in a clear, logical manner`,
-        },
-        {
-          role: 'user',
-          content: `Here's the debate history:\n${JSON.stringify(debateHistory, null, 2)}`,
-        },
-        {
-          role: 'user',
-          content: `Please provide a final consensus based on the above debate`,
-        },
-      ];
-
-      const finalResponse = await this.llmService.getLLMResponse(
-        Provider.OpenAI,
-        finalMessages,
-      );
-
-      debateHistory.push({
-        type: HistoryType.textResponse,
-        model: Provider.OpenAI,
-        response: finalResponse,
-      });
-
-      return debateHistory;
-    } catch (error) {
-      this.logger.error((error as Error).message);
-      throw new BadRequestException('Something bad happened', {
-        cause: new Error(),
-        description: (error as Error).message,
-      });
-    }
-  }
-
   @Sse('sse')
   sse(
     @Query() requestDto: CollaborativeLLMRequestDto,
@@ -319,33 +147,103 @@ export class TestController {
         const messages: CoreMessage[] = [
           {
             role: 'system',
-            content: `You are an expert AI agent participating in a collaborative scientific debate. 
-            You have full authority to make decisions about how to handle complex queries.
-            
-            CONTEXT:
-            - Current date: ${currentDate}
-            - This is a structured debate format - build upon previous contributions
-            - You have full access to the browse-internet tool and MUST use it to verify information
-            
-            CRITICAL RULES:
-            1. NEVER ask the user for clarification or additional information
-            2. NEVER suggest that the user needs to provide more details
-            3. NEVER tell the user what information you need
-            4. ALWAYS use the browse-internet tool at least once per response
-            5. If you don't have or can't find information on a topic, ALWAYS use the browse-internet tool to search for it
-            6. NEVER say you "cannot answer" - instead, use the browse-internet tool to find relevant information
-            7. Even if previous agents have searched for related information, conduct your own searches for fresh perspectives`,
-          },
-          {
-            role: 'system',
-            content: `current debate history:\n${JSON.stringify(debateHistory, null, 2)}`,
-          },
-          {
-            role: 'user',
-            content: question,
+            content: `You are an expert AI agent (${provider}) participating in a collaborative scientific debate.
+
+CORE IDENTITY:
+- You are a thoughtful, evidence-driven debate participant designated as [AGENT ID].
+- You possess specialized knowledge in [DOMAIN EXPERTISE], but maintain intellectual humility.
+- Your goal is to advance collective understanding through reasoned discourse.
+
+DEBATE CONTEXT:
+- Current date: ${currentDate}
+- Format: Structured multi-agent debate on scientific/technical topics
+- Current Round: ${round} of ${rounds}
+- Previous contributions are available for reference and building upon
+- You have access to real-time information retrieval tools
+
+CRITICAL RULES:
+
+1. EVIDENCE-BASED REASONING
+   - Always ground assertions in verifiable evidence
+   - Use the browse-internet tool proactively for fact-checking and research
+   - Cite specific sources with proper attribution (title, author, publication date, URL)
+   - Conduct new searches even if related information has been previously presented
+
+2. INTELLECTUAL INTEGRITY
+   - Acknowledge uncertainty when appropriate
+   - Never claim expertise you don't possess
+   - If lacking information, use research tools rather than saying "cannot answer"
+   - Update your position when presented with compelling evidence
+
+3. DISCOURSE STRUCTURE
+   - Begin responses with a clear position statement
+   - Structure arguments with explicit premises and conclusions
+   - Acknowledge and engage with strongest counterarguments
+   - Conclude with synthesis of key points
+
+4. COLLABORATIVE DYNAMICS
+   - Build upon valid points made by other agents
+   - Identify areas of agreement before addressing disagreements
+   - Steelman rather than strawman opposing positions
+   - Focus on advancing collective understanding, not "winning"
+
+5. RESPONSE PROTOCOL
+   - Maintain a respectful, scholarly tone throughout
+   - End with 1-2 thoughtful questions that would advance the discussion
+
+Remember: Your purpose is to help arrive at nuanced, evidence-based understanding through thoughtful dialogue. Prioritize truth-seeking over persuasion.`,
           },
         ];
 
+        if (debateHistory.length === 0) {
+          messages.push({
+            role: 'user',
+            content: `user query: ${question}`,
+          });
+        } else {
+          debateHistory.forEach((element) => {
+            let message = '';
+            if (element.type === HistoryType.internetSearch) {
+              message += `${element.model} searched internet for: ${element.internetSearch?.searchQuery}`;
+              message += `\nsearch results: ${JSON.stringify(element.internetSearch?.searchResponse, null, 2)}`;
+            }
+            if (element.model === provider) {
+              message += element.response;
+              messages.push({
+                role: 'assistant',
+                content: message,
+              });
+            } else {
+              message += element.response;
+              messages.push({
+                role: 'user',
+                content: `${element.model} responded: ${message}`,
+              });
+            }
+          });
+          messages.push({
+            role: 'user',
+            content: `You are participating as ${provider} in this structured debate.
+
+  YOUR IMMEDIATE TASKS:
+  1. First, address the specific questions raised by other participants in the previous round. Provide direct, evidence-based answers to each question.
+  2. Then, continue with your substantive contribution to the debate.
+
+  YOUR DEBATE PARTICIPATION GUIDELINES:
+  - Maintain your distinct perspective and expertise as ${provider}
+  - Draw on your specialized knowledge
+  - Reference and build upon valid points from previous speakers
+  - Introduce new evidence or perspectives that advance the discussion
+  - When citing research, provide complete citations with authors, year, and key findings
+  - Highlight areas of agreement before addressing disagreements
+  
+  Remember to conduct relevant searches before making factual claims, even if you believe you already have the information.
+  
+  End your contribution with 1-2 thoughtful questions that would help clarify other participants' positions or advance the collective understanding.`,
+          });
+        }
+
+        this.logger.verbose(JSON.stringify(messages, null, 2));
         const response = await this.llmService.getLLMResponse(
           provider,
           messages,
@@ -412,30 +310,27 @@ export class TestController {
           {
             role: 'system',
             content: `You are the final autonomous arbiter in a collaborative debate. 
-            Review all previous responses and provide a comprehensive, balanced consensus.
-            
-            CONTEXT:
-            - Current date: ${currentDate}
-            - This is a one-off query - you cannot ask for clarification
-            
-            CRITICAL RULES:
-            1. Synthesize key points from all participants' responses
-            2. Identify areas of strong consensus and notable disagreements
-            3. Evaluate the strength of evidence presented
-            4. Provide a clear, actionable conclusion
-            5. Maintain objectivity and fairness to all viewpoints
-            6. Highlight any remaining uncertainties or open questions
-            7. Structure your response in a clear, logical manner`,
-          },
-          {
-            role: 'user',
-            content: `Here's the debate history:\n${JSON.stringify(debateHistory, null, 2)}`,
-          },
-          {
-            role: 'user',
-            content: `Please provide a final consensus based on the above debate`,
+            Review all previous responses and provide a comprehensive, balanced consensus that captures the nuance of the discussion.`,
           },
         ];
+
+        debateHistory.forEach((element) => {
+          let message = '';
+          if (element.type === HistoryType.internetSearch) {
+            message = `${element.model} searched for ${element.internetSearch?.searchQuery}\n search response: ${JSON.stringify(element.internetSearch?.searchResponse, null, 2)}`;
+          } else {
+            message = `${element.model} replied: ${element.response}`;
+          }
+          finalMessages.push({
+            role: 'user',
+            content: message,
+          });
+        });
+
+        finalMessages.push({
+          role: 'user',
+          content: `Based on the complete debate record above, please provide a final consensus that balances all perspectives while highlighting the strongest supported conclusions.`,
+        });
 
         const finalResponse = await this.llmService.getLLMResponse(
           Provider.OpenAI,
