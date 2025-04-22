@@ -7,6 +7,7 @@ import {
   generateText,
   generateObject,
   ToolSet,
+  Output,
 } from 'ai';
 import {
   createOpenAI,
@@ -58,10 +59,10 @@ export class LlmService {
     let model: LanguageModelV1;
     switch (provider) {
       case Provider.OpenAI:
-        model = this.openai('gpt-4o-mini');
+        model = this.openai('gpt-4.1-mini');
         break;
       case Provider.Anthropic:
-        model = this.anthropic('claude-3-7-sonnet-20250219');
+        model = this.anthropic('claude-3-5-haiku-latest');
         break;
       case Provider.xAI:
         model = this.xai('grok-2-1212');
@@ -75,7 +76,7 @@ export class LlmService {
     }
 
     try {
-      const response = await generateText({
+      const { text } = await generateText({
         model,
         messages,
         temperature: 0.7,
@@ -87,7 +88,7 @@ export class LlmService {
           } satisfies OpenAIResponsesProviderOptions,
         },
       });
-      const responseText = response.text;
+      const responseText = text;
 
       if (responseText.length > 0) {
         this.logger.log(`${provider}: ${responseText}`);
@@ -107,7 +108,7 @@ export class LlmService {
 
     switch (provider) {
       case Provider.OpenAI:
-        model = this.openai('gpt-4o-mini');
+        model = this.openai('gpt-4.1-mini');
         break;
       case Provider.Anthropic:
         model = this.anthropic('claude-3-7-sonnet-20250219');
