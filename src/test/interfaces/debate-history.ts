@@ -6,11 +6,13 @@ export interface DebateHistory {
   model: Provider;
   response?: string;
   internetSearch?: InternetSearch;
+  roundNumber?: number;
 }
 
 export enum HistoryType {
   internetSearch = 'InternetSearch',
   textResponse = 'TextResponse',
+  roundUpdate = 'RoundUpdate',
 }
 
 export interface InternetSearch {

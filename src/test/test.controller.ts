@@ -138,9 +138,27 @@ export class TestController {
     @Query() requestDto: CollaborativeLLMRequestDto,
   ): Observable<MessageEvent<DebateHistory>> {
     const subject = new Subject<MessageEvent<DebateHistory>>();
-    const providers = [Provider.OpenAI, Provider.Google, Provider.Anthropic];
+    const providers = [
+      Provider.OpenAI,
+      Provider.Google,
+      Provider.Anthropic,
+      Provider.xAI,
+    ];
     const debateHistory: DebateHistory[] = [];
     const currentDate = new Date().toISOString().split('T')[0];
+
+    const getModelName = (provider: Provider) => {
+      switch (provider) {
+        case Provider.OpenAI:
+          return 'GPT';
+        case Provider.Google:
+          return 'Gemini';
+        case Provider.Anthropic:
+          return 'Claude';
+        case Provider.xAI:
+          return 'Grok';
+      }
+    };
 
     const processRound = async (round: number, question: string) => {
       for (const provider of providers) {
@@ -205,21 +223,22 @@ Remember: Your purpose is to help arrive at nuanced, evidence-based understandin
           debateHistory.forEach((element) => {
             let message = '';
             if (element.type === HistoryType.internetSearch) {
-              message += `${element.model} searched internet for: ${element.internetSearch?.searchQuery}`;
+              message += `${getModelName(element.model)} searched internet for: ${element.internetSearch?.searchQuery}`;
               message += `\nsearch results: ${JSON.stringify(element.internetSearch?.searchResponse, null, 2)}`;
-            }
-            if (element.model === provider) {
-              message += element.response;
-              messages.push({
-                role: 'assistant',
-                content: message,
-              });
-            } else {
-              message += element.response;
-              messages.push({
-                role: 'user',
-                content: `${element.model} responded: ${message}`,
-              });
+            } else if (element.type === HistoryType.textResponse) {
+              if (element.model === provider) {
+                message += element.response;
+                messages.push({
+                  role: 'assistant',
+                  content: message,
+                });
+              } else {
+                message += element.response;
+                messages.push({
+                  role: 'user',
+                  content: `${getModelName(element.model)} responded: ${message}`,
+                });
+              }
             }
           });
           messages.push({
@@ -306,6 +325,14 @@ Access up-to-date information from across the web via Google search, returning t
         debateHistory.push(responseHistory);
         subject.next({ data: responseHistory } as MessageEvent<DebateHistory>);
       }
+      const roundUpdate: DebateHistory = {
+        type: HistoryType.roundUpdate,
+        model: Provider.xAI,
+        roundNumber: round + 1,
+      };
+      subject.next({
+        data: roundUpdate,
+      } as MessageEvent<DebateHistory>);
     };
 
     // Start processing rounds

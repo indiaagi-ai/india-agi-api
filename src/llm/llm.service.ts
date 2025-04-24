@@ -7,7 +7,6 @@ import {
   generateText,
   generateObject,
   ToolSet,
-  Output,
 } from 'ai';
 import {
   createOpenAI,
@@ -59,13 +58,13 @@ export class LlmService {
     let model: LanguageModelV1;
     switch (provider) {
       case Provider.OpenAI:
-        model = this.openai('gpt-4.1-mini');
+        model = this.openai('gpt-4.1-nano');
         break;
       case Provider.Anthropic:
         model = this.anthropic('claude-3-5-haiku-latest');
         break;
       case Provider.xAI:
-        model = this.xai('grok-2-1212');
+        model = this.xai('grok-3-mini-beta');
         break;
       case Provider.Google:
         model = this.google('gemini-2.0-flash-lite-preview-02-05', {});
@@ -108,13 +107,13 @@ export class LlmService {
 
     switch (provider) {
       case Provider.OpenAI:
-        model = this.openai('gpt-4.1-mini');
+        model = this.openai('gpt-4.1-nano');
         break;
       case Provider.Anthropic:
         model = this.anthropic('claude-3-7-sonnet-20250219');
         break;
       case Provider.xAI:
-        model = this.xai('grok-2-1212');
+        model = this.xai('grok-');
         break;
       case Provider.Google:
         model = this.google('gemini-2.0-flash-lite-preview-02-05', {});

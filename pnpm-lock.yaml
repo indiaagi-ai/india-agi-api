@@ -21,8 +21,8 @@ importers:
         specifier: ^1.3.16
         version: 1.3.16(zod@3.24.2)
       '@ai-sdk/xai':
-        specifier: ^1.2.4
-        version: 1.2.4(zod@3.24.2)
+        specifier: ^1.2.15
+        version: 1.2.15(zod@3.24.2)
       '@nestjs/axios':
         specifier: ^4.0.0
         version: 4.0.0(@nestjs/common@11.0.12(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(axios@1.8.4)(rxjs@7.8.2)
@@ -162,8 +162,8 @@ packages:
     peerDependencies:
       zod: ^3.0.0
 
-  '@ai-sdk/openai-compatible@0.2.3':
-    resolution: {integrity: sha512-q2rSf/Kp5Gsp/t8UKGBPukGFoJUMZOOtjqaqRgRtkUihEmAdV9s6xRufxxe/v+BPfgsGHjOCdqkBrFbtS+VJKw==}
+  '@ai-sdk/openai-compatible@0.2.13':
+    resolution: {integrity: sha512-tB+lL8Z3j0qDod/mvxwjrPhbLUHp/aQW+NvMoJaqeTtP+Vmv5qR800pncGczxn5WN0pllQm+7aIRDnm69XeSbg==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.0.0
@@ -226,8 +226,8 @@ packages:
     peerDependencies:
       zod: ^3.23.8
 
-  '@ai-sdk/xai@1.2.4':
-    resolution: {integrity: sha512-mWb1J1eXSUcwGatZFANG0Mfqv3xSlzM1HICsTE1QOnXeH6TnysQjX/3zIgiUu/UjANrxMLCINC2LRDOCDaY4Mg==}
+  '@ai-sdk/xai@1.2.15':
+    resolution: {integrity: sha512-18qEYyVHIqTiOMePE00bfx4kJrTHM4dV3D3Rpe+eBISlY80X1FnzZRnRTJo3Q6MOSmW5+ZKVaX9jtryhoFpn0A==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.0.0
@@ -3732,10 +3732,10 @@ snapshots:
       '@ai-sdk/provider-utils': 2.2.6(zod@3.24.2)
       zod: 3.24.2
 
-  '@ai-sdk/openai-compatible@0.2.3(zod@3.24.2)':
+  '@ai-sdk/openai-compatible@0.2.13(zod@3.24.2)':
     dependencies:
-      '@ai-sdk/provider': 1.1.0
-      '@ai-sdk/provider-utils': 2.2.2(zod@3.24.2)
+      '@ai-sdk/provider': 1.1.3
+      '@ai-sdk/provider-utils': 2.2.7(zod@3.24.2)
       zod: 3.24.2
 
   '@ai-sdk/openai@1.3.16(zod@3.24.2)':
@@ -3801,11 +3801,11 @@ snapshots:
       zod: 3.24.2
       zod-to-json-schema: 3.24.5(zod@3.24.2)
 
-  '@ai-sdk/xai@1.2.4(zod@3.24.2)':
+  '@ai-sdk/xai@1.2.15(zod@3.24.2)':
     dependencies:
-      '@ai-sdk/openai-compatible': 0.2.3(zod@3.24.2)
-      '@ai-sdk/provider': 1.1.0
-      '@ai-sdk/provider-utils': 2.2.2(zod@3.24.2)
+      '@ai-sdk/openai-compatible': 0.2.13(zod@3.24.2)
+      '@ai-sdk/provider': 1.1.3
+      '@ai-sdk/provider-utils': 2.2.7(zod@3.24.2)
       zod: 3.24.2
 
   '@ampproject/remapping@2.3.0':

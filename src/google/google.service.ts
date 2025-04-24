@@ -44,7 +44,7 @@ export class GoogleService {
           const markdown = this.scraperService.convertHtmlToMarkdown(cleaned);
           const summary =
             markdown.length > 0
-              ? await this.llmService.generateSummary(Provider.OpenAI, markdown)
+              ? await this.llmService.generateSummary(Provider.Google, markdown)
               : '';
 
           return {
