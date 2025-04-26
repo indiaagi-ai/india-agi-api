@@ -113,7 +113,7 @@ export class LlmService {
         model = this.anthropic('claude-3-7-sonnet-20250219');
         break;
       case Provider.xAI:
-        model = this.xai('grok-');
+        model = this.xai('grok-3-mini-beta');
         break;
       case Provider.Google:
         model = this.google('gemini-2.0-flash-lite-preview-02-05', {});

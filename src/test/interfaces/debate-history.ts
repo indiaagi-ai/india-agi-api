@@ -13,6 +13,7 @@ export enum HistoryType {
   internetSearch = 'InternetSearch',
   textResponse = 'TextResponse',
   roundUpdate = 'RoundUpdate',
+  providerUpdate = 'ProviderUpdate',
 }
 
 export interface InternetSearch {

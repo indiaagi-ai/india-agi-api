@@ -162,6 +162,14 @@ export class TestController {
 
     const processRound = async (round: number, question: string) => {
       for (const provider of providers) {
+        const providerUpdate: DebateHistory = {
+          type: HistoryType.providerUpdate,
+          model: provider,
+        };
+        subject.next({
+          data: providerUpdate,
+        } as MessageEvent<DebateHistory>);
+
         const messages: CoreMessage[] = [
           {
             role: 'system',
@@ -253,7 +261,7 @@ Remember: Your purpose is to help arrive at nuanced, evidence-based understandin
 - Introduce relevant new perspectives when appropriate
 - Maintain intellectual charity and good faith throughout
 
-Your response should flow naturally as part of the existing conversation without any framing statements about your role or task.`,
+Your response should flow naturally as part of the existing conversation without any framing statements about your role or task.  Original user query: ${question}`,
           });
         }
 
@@ -343,22 +351,21 @@ Access up-to-date information from across the web via Google search, returning t
         for (let round = 0; round < rounds; round++) {
           await processRound(round, question);
         }
-
         // Get final consensus
         const finalMessages: CoreMessage[] = [
           {
             role: 'system',
             content: `You are the final autonomous arbiter in a collaborative debate. 
-            Review all previous responses and provide a comprehensive, balanced consensus that captures the nuance of the discussion.`,
+            Review all previous responses and provide a comprehensive, balanced consensus that captures the nuance of the discussion. Your response should flow naturally as part of the existing conversation without any framing statements about your role or task.`,
           },
         ];
 
         debateHistory.forEach((element) => {
           let message = '';
           if (element.type === HistoryType.internetSearch) {
-            message = `${element.model} searched for ${element.internetSearch?.searchQuery}\n search response: ${JSON.stringify(element.internetSearch?.searchResponse, null, 2)}`;
+            message = `${getModelName(element.model)} searched for ${element.internetSearch?.searchQuery}\n search response: ${JSON.stringify(element.internetSearch?.searchResponse, null, 2)}`;
           } else {
-            message = `${element.model} replied: ${element.response}`;
+            message = `${getModelName(element.model)} replied: ${element.response}`;
           }
           finalMessages.push({
             role: 'user',
@@ -368,17 +375,26 @@ Access up-to-date information from across the web via Google search, returning t
 
         finalMessages.push({
           role: 'user',
-          content: `Based on the complete debate record above, please provide a final consensus that balances all perspectives while highlighting the strongest supported conclusions.`,
+          content: `Based on the complete debate record above, please provide a final consensus that balances all perspectives while highlighting the strongest supported conclusions. Your response should flow naturally as part of the existing conversation without any framing statements about your role or task. Original user query: ${question}`,
         });
 
+        const providerUpdate: DebateHistory = {
+          type: HistoryType.providerUpdate,
+          model: Provider.xAI,
+        };
+
+        subject.next({
+          data: providerUpdate,
+        } as MessageEvent<DebateHistory>);
+
         const finalResponse = await this.llmService.getLLMResponse(
-          Provider.OpenAI,
+          Provider.xAI,
           finalMessages,
         );
 
         const finalHistory: DebateHistory = {
           type: HistoryType.textResponse,
-          model: Provider.OpenAI,
+          model: Provider.xAI,
           response: finalResponse,
         };
         debateHistory.push(finalHistory);
