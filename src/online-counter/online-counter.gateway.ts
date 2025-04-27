@@ -1,13 +1,9 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  SubscribeMessage,
-  WebSocketGateway,
-  WebSocketServer,
-} from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 
-@WebSocketGateway()
+@WebSocketGateway({ cors: true })
 export class OnlineCounterGateway {
   logger: Logger;
   constructor(private readonly config: ConfigService) {
@@ -46,13 +42,5 @@ export class OnlineCounterGateway {
 
   private broadcastCount(count: number) {
     this.server.emit('onlineCount', { count });
-  }
-
-  @SubscribeMessage('message')
-  handleMessage() {
-    let count = this.config.getOrThrow<number>('ONLINE_COUNT');
-    count++;
-    this.config.set('ONLINE_COUNT', count);
-    this.server.emit('reply', `broadcasting online count ${count}...`);
   }
 }
