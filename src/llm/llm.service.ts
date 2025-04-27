@@ -58,7 +58,7 @@ export class LlmService {
     let model: LanguageModelV1;
     switch (provider) {
       case Provider.OpenAI:
-        model = this.openai('gpt-4.1-nano');
+        model = this.openai('gpt-4o-mini');
         break;
       case Provider.Anthropic:
         model = this.anthropic('claude-3-5-haiku-latest');

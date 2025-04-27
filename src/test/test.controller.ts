@@ -98,7 +98,15 @@ export class TestController {
               ),
           }),
           execute: async ({ search_query, page_number }) => {
-            return await this.googleService.search(search_query, page_number);
+            const response = await this.googleService.search(
+              search_query,
+              page_number,
+            );
+            try {
+              return response;
+            } catch {
+              return null;
+            }
           },
         }),
       };
@@ -138,12 +146,7 @@ export class TestController {
     @Query() requestDto: CollaborativeLLMRequestDto,
   ): Observable<MessageEvent<DebateHistory>> {
     const subject = new Subject<MessageEvent<DebateHistory>>();
-    const providers = [
-      Provider.OpenAI,
-      Provider.Google,
-      Provider.Anthropic,
-      Provider.xAI,
-    ];
+    const providers = [Provider.OpenAI, Provider.Google, Provider.Anthropic];
     const debateHistory: DebateHistory[] = [];
     const currentDate = new Date().toISOString().split('T')[0];
 
@@ -333,14 +336,6 @@ Access up-to-date information from across the web via Google search, returning t
         debateHistory.push(responseHistory);
         subject.next({ data: responseHistory } as MessageEvent<DebateHistory>);
       }
-      const roundUpdate: DebateHistory = {
-        type: HistoryType.roundUpdate,
-        model: Provider.xAI,
-        roundNumber: round + 1,
-      };
-      subject.next({
-        data: roundUpdate,
-      } as MessageEvent<DebateHistory>);
     };
 
     // Start processing rounds
@@ -350,55 +345,65 @@ Access up-to-date information from across the web via Google search, returning t
       try {
         for (let round = 0; round < rounds; round++) {
           await processRound(round, question);
-        }
-        // Get final consensus
-        const finalMessages: CoreMessage[] = [
-          {
-            role: 'system',
-            content: `You are the final autonomous arbiter in a collaborative debate. 
+          // Get final consensus
+          const finalMessages: CoreMessage[] = [
+            {
+              role: 'system',
+              content: `You are the final autonomous arbiter in a collaborative debate. 
             Review all previous responses and provide a comprehensive, balanced consensus that captures the nuance of the discussion. Your response should flow naturally as part of the existing conversation without any framing statements about your role or task.`,
-          },
-        ];
+            },
+          ];
 
-        debateHistory.forEach((element) => {
-          let message = '';
-          if (element.type === HistoryType.internetSearch) {
-            message = `${getModelName(element.model)} searched for ${element.internetSearch?.searchQuery}\n search response: ${JSON.stringify(element.internetSearch?.searchResponse, null, 2)}`;
-          } else {
-            message = `${getModelName(element.model)} replied: ${element.response}`;
-          }
+          debateHistory.forEach((element) => {
+            let message = '';
+            if (element.type === HistoryType.internetSearch) {
+              message = `${getModelName(element.model)} searched for ${element.internetSearch?.searchQuery}\n search response: ${JSON.stringify(element.internetSearch?.searchResponse, null, 2)}`;
+            } else {
+              message = `${getModelName(element.model)} replied: ${element.response}`;
+            }
+            finalMessages.push({
+              role: 'user',
+              content: message,
+            });
+          });
+
           finalMessages.push({
             role: 'user',
-            content: message,
+            content: `Based on the complete debate record above, please provide a final consensus that balances all perspectives while highlighting the strongest supported conclusions. Your response should flow naturally as part of the existing conversation without any framing statements about your role or task. Original user query: ${question}`,
           });
-        });
 
-        finalMessages.push({
-          role: 'user',
-          content: `Based on the complete debate record above, please provide a final consensus that balances all perspectives while highlighting the strongest supported conclusions. Your response should flow naturally as part of the existing conversation without any framing statements about your role or task. Original user query: ${question}`,
-        });
+          const providerUpdate: DebateHistory = {
+            type: HistoryType.providerUpdate,
+            model: Provider.xAI,
+          };
 
-        const providerUpdate: DebateHistory = {
-          type: HistoryType.providerUpdate,
-          model: Provider.xAI,
-        };
+          subject.next({
+            data: providerUpdate,
+          } as MessageEvent<DebateHistory>);
 
-        subject.next({
-          data: providerUpdate,
-        } as MessageEvent<DebateHistory>);
+          const finalResponse = await this.llmService.getLLMResponse(
+            Provider.xAI,
+            finalMessages,
+          );
 
-        const finalResponse = await this.llmService.getLLMResponse(
-          Provider.xAI,
-          finalMessages,
-        );
+          const finalHistory: DebateHistory = {
+            type: HistoryType.textResponse,
+            model: Provider.xAI,
+            response: finalResponse,
+          };
+          debateHistory.push(finalHistory);
+          subject.next({ data: finalHistory } as MessageEvent<DebateHistory>);
 
-        const finalHistory: DebateHistory = {
-          type: HistoryType.textResponse,
-          model: Provider.xAI,
-          response: finalResponse,
-        };
-        debateHistory.push(finalHistory);
-        subject.next({ data: finalHistory } as MessageEvent<DebateHistory>);
+          const roundUpdate: DebateHistory = {
+            type: HistoryType.roundUpdate,
+            model: Provider.xAI,
+            roundNumber: round + 1,
+          };
+          subject.next({
+            data: roundUpdate,
+          } as MessageEvent<DebateHistory>);
+        }
+
         subject.complete();
       } catch (error) {
         this.logger.error((error as Error).message);
