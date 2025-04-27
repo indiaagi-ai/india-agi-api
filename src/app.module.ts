@@ -7,6 +7,7 @@ import { TestController } from './test/test.controller';
 import { LlmModule } from './llm/llm.module';
 import { ConfigModule } from '@nestjs/config';
 import { GoogleModule } from './google/google.module';
+import { OnlineCounterModule } from './online-counter/online-counter.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { GoogleModule } from './google/google.module';
     ScraperModule,
     LlmModule,
     GoogleModule,
+    OnlineCounterModule,
   ],
   controllers: [TestController],
   providers: [AppService],
