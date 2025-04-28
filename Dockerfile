@@ -23,4 +23,4 @@ RUN npm run build
 EXPOSE 4001
 
 # Command to run the application
-CMD ["pm2", "start", "dist/main.js", "--name", "india-agi-api"]
+CMD ["pm2-runtime", "start", "dist/main.js", "--name", "india-agi-api"]
