@@ -10,6 +10,9 @@ COPY package*.json ./
 # Install the application dependencies
 RUN npm install
 
+# Install PM2 globally and application dependencies
+RUN npm install pm2 -g && npm install
+
 # Copy the rest of the application files
 COPY . .
 
@@ -20,4 +23,4 @@ RUN npm run build
 EXPOSE 4001
 
 # Command to run the application
-CMD ["node", "dist/main"]
+CMD ["pm2", "start", "dist/main.js", "--name", "india-agi-api"]
