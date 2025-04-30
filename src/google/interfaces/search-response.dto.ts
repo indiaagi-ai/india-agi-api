@@ -8,6 +8,7 @@ export interface Item {
   snippet: string;
   pagemap?: PageMap;
   content?: string;
+  markdown?: string;
 }
 
 export interface PageMap {
