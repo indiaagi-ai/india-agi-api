@@ -269,72 +269,78 @@ Your response should flow naturally as part of the existing conversation without
         }
 
         this.logger.verbose(JSON.stringify(messages, null, 2));
-        const response = await this.llmService.getLLMResponse(
-          provider,
-          messages,
-          {
-            'browse-internet': tool({
-              description: `## PURPOSE
-Access up-to-date information from across the web via Google search, returning titles, descriptions, and URLs.
-
-## WHEN TO USE
-- Current events, breaking news, or recent developments
-- Time-sensitive information (prices, statistics, deadlines)
-- Specific facts that may have changed since your knowledge cutoff
-- Subject-specific details outside your core knowledge base
-- Verification of claims requiring current sources
-- Questions about ongoing trends or evolving situations
-
-## WHEN NOT TO USE
-- General knowledge queries about established concepts
-- Requests for logical reasoning or analysis
-- Opinion-based questions or subjective assessments
-- Creative content generation (stories, poetry, code)
-- Well-documented historical events prior to your knowledge cutoff
-- Philosophical or abstract discussions not requiring factual updates
-- Mathematical proofs or theoretical computations`,
-              parameters: z.object({
-                search_query: z
-                  .string()
-                  .describe(
-                    'The search query to look up on the internet. Be specific and include relevant keywords for better results.',
-                  ),
-                page_number: z
-                  .number()
-                  .describe(
-                    'The page number of search results to retrieve. Starts at 0 for the first page of results.',
-                  ),
+        try {
+          const response = await this.llmService.getLLMResponse(
+            provider,
+            messages,
+            {
+              'browse-internet': tool({
+                description: `## PURPOSE
+  Access up-to-date information from across the web via Google search, returning titles, descriptions, and URLs.
+  
+  ## WHEN TO USE
+  - Current events, breaking news, or recent developments
+  - Time-sensitive information (prices, statistics, deadlines)
+  - Specific facts that may have changed since your knowledge cutoff
+  - Subject-specific details outside your core knowledge base
+  - Verification of claims requiring current sources
+  - Questions about ongoing trends or evolving situations
+  
+  ## WHEN NOT TO USE
+  - General knowledge queries about established concepts
+  - Requests for logical reasoning or analysis
+  - Opinion-based questions or subjective assessments
+  - Creative content generation (stories, poetry, code)
+  - Well-documented historical events prior to your knowledge cutoff
+  - Philosophical or abstract discussions not requiring factual updates
+  - Mathematical proofs or theoretical computations`,
+                parameters: z.object({
+                  search_query: z
+                    .string()
+                    .describe(
+                      'The search query to look up on the internet. Be specific and include relevant keywords for better results.',
+                    ),
+                  page_number: z
+                    .number()
+                    .describe(
+                      'The page number of search results to retrieve. Starts at 0 for the first page of results.',
+                    ),
+                }),
+                execute: async ({ search_query, page_number }) => {
+                  const searchResponse = await this.googleService.search(
+                    search_query,
+                    page_number,
+                  );
+                  const searchHistory: DebateHistory = {
+                    type: HistoryType.internetSearch,
+                    model: provider,
+                    internetSearch: {
+                      searchQuery: search_query,
+                      searchResponse,
+                    },
+                  };
+                  debateHistory.push(searchHistory);
+                  subject.next({
+                    data: searchHistory,
+                  } as MessageEvent<DebateHistory>);
+                  return searchResponse;
+                },
               }),
-              execute: async ({ search_query, page_number }) => {
-                const searchResponse = await this.googleService.search(
-                  search_query,
-                  page_number,
-                );
-                const searchHistory: DebateHistory = {
-                  type: HistoryType.internetSearch,
-                  model: provider,
-                  internetSearch: {
-                    searchQuery: search_query,
-                    searchResponse,
-                  },
-                };
-                debateHistory.push(searchHistory);
-                subject.next({
-                  data: searchHistory,
-                } as MessageEvent<DebateHistory>);
-                return searchResponse;
-              },
-            }),
-          },
-        );
+            },
+          );
 
-        const responseHistory: DebateHistory = {
-          type: HistoryType.textResponse,
-          model: provider,
-          response: response,
-        };
-        debateHistory.push(responseHistory);
-        subject.next({ data: responseHistory } as MessageEvent<DebateHistory>);
+          const responseHistory: DebateHistory = {
+            type: HistoryType.textResponse,
+            model: provider,
+            response: response,
+          };
+          debateHistory.push(responseHistory);
+          subject.next({
+            data: responseHistory,
+          } as MessageEvent<DebateHistory>);
+        } catch (error) {
+          this.logger.error((error as Error).message);
+        }
       }
     };
 
