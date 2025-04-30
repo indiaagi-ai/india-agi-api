@@ -61,7 +61,7 @@ export class LlmService {
         model = this.openai('gpt-4o-mini');
         break;
       case Provider.Anthropic:
-        model = this.anthropic('claude-3-5-haiku-latest');
+        model = this.anthropic('claude-3-haiku-20240307');
         break;
       case Provider.xAI:
         model = this.xai('grok-3-mini-beta');
@@ -110,7 +110,7 @@ export class LlmService {
         model = this.openai('gpt-4.1-nano');
         break;
       case Provider.Anthropic:
-        model = this.anthropic('claude-3-7-sonnet-20250219');
+        model = this.anthropic('claude-3-haiku-20240307');
         break;
       case Provider.xAI:
         model = this.xai('grok-3-mini-beta');
