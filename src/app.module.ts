@@ -5,20 +5,37 @@ import { AppMiddleware } from './app/app.middleware';
 import { HttpModule } from '@nestjs/axios';
 import { TestController } from './test/test.controller';
 import { LlmModule } from './llm/llm.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { GoogleModule } from './google/google.module';
 import { OnlineCounterModule } from './online-counter/online-counter.module';
+import { CounterModule } from './counter/counter.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.getOrThrow('DB_HOST'),
+        port: config.getOrThrow<number>('DB_PORT'),
+        username: config.getOrThrow('DB_USERNAME'),
+        password: config.getOrThrow('DB_PASSWORD'),
+        database: config.getOrThrow('DB_NAME'),
+        autoLoadEntities: true,
+        synchronize: true,
+      }),
+    }),
     HttpModule,
     ScraperModule,
     LlmModule,
     GoogleModule,
     OnlineCounterModule,
+    CounterModule,
   ],
   controllers: [TestController],
   providers: [AppService],

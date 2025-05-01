@@ -2,21 +2,25 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { CounterService } from 'src/counter/counter.service';
 
 @WebSocketGateway({ cors: true })
 export class OnlineCounterGateway {
   logger: Logger;
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly counterService: CounterService,
+  ) {
     this.logger = new Logger(OnlineCounterGateway.name);
   }
 
   @WebSocketServer() server: Server;
-  handleConnection(client: Socket) {
+  async handleConnection(client: Socket) {
     // Increment counter on client connection
     let count = this.config.getOrThrow<number>('ONLINE_COUNT');
     count++;
     this.config.set('ONLINE_COUNT', count);
-
+    await this.counterService.logLogin();
     this.logger.log(`Client connected: ${client.id}. Online count: ${count}`);
 
     // Broadcast updated count to all clients
