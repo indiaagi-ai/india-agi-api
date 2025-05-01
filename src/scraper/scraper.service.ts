@@ -15,13 +15,14 @@ export class ScraperService {
 
   async getHtmlContent(pageURL: string): Promise<string> {
     try {
+      this.logger.log(`fetching ${pageURL}`);
       const response: AxiosResponse<string> =
         await this.httpService.axiosRef.get(pageURL, {
           headers: {
             'User-Agent':
               'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
           },
-          timeout: 10000, // 10 seconds timeout
+          timeout: 1000,
         });
       return response.data;
     } catch {
