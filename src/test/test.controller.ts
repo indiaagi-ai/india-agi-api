@@ -20,6 +20,7 @@ import { GoogleService } from 'src/google/google.service';
 import { z } from 'zod';
 import { Provider } from 'src/llm/interfaces';
 import { Observable, Subject } from 'rxjs';
+import { CounterService } from 'src/counter/counter.service';
 
 @Controller('test')
 export class TestController {
@@ -28,6 +29,7 @@ export class TestController {
     private readonly scraperService: ScraperService,
     private readonly llmService: LlmService,
     private readonly googleService: GoogleService,
+    private readonly counterService: CounterService,
   ) {
     this.logger = new Logger(TestController.name);
   }
@@ -348,6 +350,7 @@ Your response should flow naturally as part of the existing conversation without
     const { question, rounds } = requestDto;
 
     void (async () => {
+      await this.counterService.logQuestion(requestDto.question);
       try {
         for (let round = 0; round < rounds; round++) {
           await processRound(round, question);
