@@ -10,6 +10,9 @@ export class Log {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ type: 'text', name: 'visitor_id' })
+  visitorId: string;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'login_time' })
   loginTime: Date;
 }
@@ -24,4 +27,12 @@ export class Question {
 
   @CreateDateColumn({ type: 'timestamptz', name: 'asked_time' })
   askedTime: Date;
+}
+
+@Entity('shares')
+export class Share {
+  @PrimaryGeneratedColumn() id: number;
+
+  @CreateDateColumn({ type: 'timestamptz', name: 'shared_time' })
+  sharedTime: Date;
 }

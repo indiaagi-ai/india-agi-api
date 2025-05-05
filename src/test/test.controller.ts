@@ -5,6 +5,7 @@ import {
   Logger,
   BadRequestException,
   Sse,
+  Post,
 } from '@nestjs/common';
 import { ScraperService } from 'src/scraper/scraper.service';
 import { LlmService } from 'src/llm/llm.service';
@@ -134,6 +135,19 @@ export class TestController {
         requestDto.searchQuery,
         requestDto.pageNumber,
       );
+    } catch (error) {
+      this.logger.error((error as Error).message);
+      throw new BadRequestException('Something bad happened', {
+        cause: new Error(),
+        description: (error as Error).message,
+      });
+    }
+  }
+
+  @Post('log-share')
+  async shareClicked() {
+    try {
+      return await this.counterService.logShare();
     } catch (error) {
       this.logger.error((error as Error).message);
       throw new BadRequestException('Something bad happened', {

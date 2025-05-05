@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Log, Question } from './counter.entity';
+import { Log, Question, Share } from './counter.entity';
 import { LoginStats } from './interfaces';
 
 @Injectable()
@@ -12,11 +12,14 @@ export class CounterService {
 
     @InjectRepository(Question)
     private readonly questionRepository: Repository<Question>,
+
+    @InjectRepository(Share)
+    private readonly shareRepository: Repository<Share>,
   ) {}
 
   // Method to insert a login record
-  async logLogin(): Promise<void> {
-    await this.logRepository.insert({});
+  async logLogin(visitorId: string): Promise<void> {
+    await this.logRepository.insert({ visitorId });
   }
 
   // Method to get login counts
@@ -27,9 +30,9 @@ export class CounterService {
   }> {
     const result = (await this.logRepository.query(`
         SELECT
-          COUNT(*) FILTER (WHERE login_time::date = CURRENT_DATE) AS today,
-          COUNT(*) FILTER (WHERE login_time::date = CURRENT_DATE - INTERVAL '1 day') AS yesterday,
-          COUNT(*) AS total
+          COUNT(DISTINCT visitor_id) FILTER (WHERE login_time::date = CURRENT_DATE AND visitor_id IS NOT NULL) AS today,
+          COUNT(DISTINCT visitor_id) FILTER (WHERE login_time::date = CURRENT_DATE - INTERVAL '1 day' AND visitor_id IS NOT NULL) AS yesterday,
+          COUNT(DISTINCT visitor_id) FILTER (WHERE visitor_id IS NOT NULL) AS total
         FROM logs
       `)) as Array<LoginStats>; // PG returns strings for counts
 
@@ -61,6 +64,28 @@ export class CounterService {
           COUNT(*) AS total
         FROM questions
       `)) as Array<LoginStats>;
+
+    const { today, yesterday, total } = result[0];
+
+    return {
+      today: Number(today),
+      yesterday: Number(yesterday),
+      total: Number(total),
+    };
+  }
+
+  async logShare() {
+    await this.shareRepository.save({});
+  }
+
+  async getShareStats() {
+    const result = (await this.shareRepository.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE shared_time::date = CURRENT_DATE) AS today,
+        COUNT(*) FILTER (WHERE shared_time::date = CURRENT_DATE - INTERVAL '1 day') AS yesterday,
+        COUNT(*) AS total
+      FROM shares
+    `)) as Array<LoginStats>;
 
     const { today, yesterday, total } = result[0];
 

@@ -14,4 +14,9 @@ export class CounterController {
   async getQuestionsStats() {
     return await this.counterService.getQuestionsStats();
   }
+
+  @Get('shares')
+  async getShareStats() {
+    return await this.counterService.getShareStats();
+  }
 }
