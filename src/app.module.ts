@@ -10,6 +10,7 @@ import { GoogleModule } from './google/google.module';
 import { OnlineCounterModule } from './online-counter/online-counter.module';
 import { CounterModule } from './counter/counter.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { GithubModule } from './github/github.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     GoogleModule,
     OnlineCounterModule,
     CounterModule,
+    GithubModule,
   ],
   controllers: [TestController],
   providers: [AppService],
