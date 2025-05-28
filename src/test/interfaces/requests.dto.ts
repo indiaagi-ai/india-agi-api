@@ -43,3 +43,29 @@ export class CollaborativeLLMRequestDto {
   @IsNotEmpty()
   rounds: number;
 }
+
+export class TextToSpeechRequest {
+  @ApiProperty({
+    example: 'What is the best approach to solve climate change?',
+    description: 'The question or topic for the LLMs to debate',
+  })
+  @IsString()
+  @IsNotEmpty()
+  text: string;
+
+  @ApiProperty({
+    example: 'en-IN',
+    description: 'The question or topic for the LLMs to debate',
+  })
+  @IsString()
+  @IsNotEmpty()
+  languageCode: string;
+
+  @ApiProperty({
+    example: 'en-IN-Standard-C',
+    description: 'The question or topic for the LLMs to debate',
+  })
+  @IsString()
+  @IsNotEmpty()
+  voiceName: string;
+}

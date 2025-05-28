@@ -6,6 +6,8 @@ import {
   BadRequestException,
   Sse,
   Post,
+  Body,
+  Res,
 } from '@nestjs/common';
 import { ScraperService } from 'src/scraper/scraper.service';
 import { LlmService } from 'src/llm/llm.service';
@@ -15,6 +17,7 @@ import {
   CollaborativeLLMRequestDto,
   DebateHistory,
   HistoryType,
+  TextToSpeechRequest,
 } from './interfaces';
 import { CoreMessage, tool, ToolSet } from 'ai';
 import { GoogleService } from 'src/google/google.service';
@@ -22,6 +25,7 @@ import { z } from 'zod';
 import { Provider } from 'src/llm/interfaces';
 import { Observable, Subject } from 'rxjs';
 import { CounterService } from 'src/counter/counter.service';
+import { Response } from 'express';
 
 @Controller('test')
 export class TestController {
@@ -435,5 +439,64 @@ Your response should flow naturally as part of the existing conversation without
     })();
 
     return subject.asObservable();
+  }
+
+  @Post('convert')
+  async convertTextToSpeech(
+    @Body() body: TextToSpeechRequest,
+    @Res() res: Response,
+  ) {
+    try {
+      const { text, languageCode, voiceName } = body;
+
+      // Validate input
+      if (!text || !languageCode || !voiceName) {
+        throw new BadRequestException(
+          'Missing required fields: text, languageCode, or voiceName',
+        );
+      }
+
+      if (text.trim().length === 0) {
+        throw new BadRequestException('Text cannot be empty');
+      }
+
+      // Log the request
+      this.logger.log(
+        `Converting text to speech: ${text.length} characters, language: ${languageCode}, voice: ${voiceName}`,
+      );
+
+      // Convert text to speech (handles chunking internally)
+      const audioContent = await this.googleService.textToSpeech(
+        text,
+        languageCode,
+        voiceName,
+      );
+
+      // Set appropriate headers for MP3 response
+      res.set({
+        'Content-Type': 'audio/mpeg',
+        'Content-Length': audioContent?.length.toString(),
+        'Content-Disposition': 'attachment; filename="speech.mp3"',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
+      });
+
+      // Send the binary audio data
+      res.status(200).send(audioContent);
+    } catch (error) {
+      this.logger.error(
+        `Text-to-speech conversion failed: ${(error as Error).message}`,
+      );
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new BadRequestException('Text-to-speech conversion failed', {
+        cause: new Error(),
+        description: (error as Error).message,
+      });
+    }
   }
 }

@@ -6,10 +6,13 @@ import { AxiosResponse } from 'axios';
 import { ScraperService } from 'src/scraper/scraper.service';
 import { LlmService } from 'src/llm/llm.service';
 import { Provider } from 'src/llm/interfaces';
+import { TextToSpeechClient, protos } from '@google-cloud/text-to-speech';
 
 @Injectable()
 export class GoogleService {
   logger: Logger;
+  client: TextToSpeechClient;
+
   constructor(
     private readonly config: ConfigService,
     private readonly httpService: HttpService,
@@ -17,6 +20,7 @@ export class GoogleService {
     private readonly llmService: LlmService,
   ) {
     this.logger = new Logger(GoogleService.name);
+    this.client = new TextToSpeechClient();
   }
 
   async search(searchQuery: string, pageNumber: number): Promise<Item[]> {
@@ -106,5 +110,19 @@ export class GoogleService {
     });
     this.logger.verbose(googleSearchResponseString.join('\n'));
     return response.data.items;
+  }
+
+  async textToSpeech(text: string, languageCode: string, name: string) {
+    const request: protos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest =
+      {
+        input: { text },
+        voice: {
+          languageCode,
+          name,
+        },
+        audioConfig: { audioEncoding: 'MP3' },
+      };
+    const [response] = await this.client.synthesizeSpeech(request);
+    return response.audioContent;
   }
 }
