@@ -417,6 +417,7 @@ Your response should flow naturally as part of the existing conversation without
             type: HistoryType.textResponse,
             model: Provider.xAI,
             response: finalResponse,
+            roundNumber: round,
           };
           debateHistory.push(finalHistory);
           subject.next({ data: finalHistory } as MessageEvent<DebateHistory>);

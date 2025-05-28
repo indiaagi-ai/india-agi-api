@@ -1,4 +1,1 @@
-CONTAINERS=$(sudo docker ps -q --filter "publish=4001")
-sudo docker stop $CONTAINERS
-sudo docker build -t india-agi-api .
-sudo docker run -d -p 4001:4001 india-agi-api
+sudo docker build -t india-agi-api . && CONTAINERS=$(sudo docker ps -q --filter "publish=4001") && [ -n "$CONTAINERS" ] && sudo docker stop $CONTAINERS || echo "No containers to stop" && sudo docker run -d -p 4001:4001 india-agi-api
