@@ -113,6 +113,21 @@ export class GoogleService {
   }
 
   async textToSpeech(text: string, languageCode: string, name: string) {
+    // Check if text exceeds 5000 bytes
+    const textBytes = Buffer.byteLength(text, 'utf8');
+
+    if (textBytes <= 5000) {
+      return this.shortTextToSpeech(text, languageCode, name);
+    } else {
+      return this.textToSpeechChunked(text, languageCode, name);
+    }
+  }
+
+  private async shortTextToSpeech(
+    text: string,
+    languageCode: string,
+    name: string,
+  ) {
     const request: protos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest =
       {
         input: { text },
@@ -122,7 +137,81 @@ export class GoogleService {
         },
         audioConfig: { audioEncoding: 'MP3' },
       };
+
     const [response] = await this.client.synthesizeSpeech(request);
     return response.audioContent;
+  }
+
+  private async textToSpeechChunked(
+    text: string,
+    languageCode: string,
+    name: string,
+  ) {
+    const chunks = this.splitTextIntoChunks(text, 4500); // Leave some buffer
+    const audioChunks: Buffer[] = [];
+
+    for (const chunk of chunks) {
+      const audio = await this.shortTextToSpeech(chunk, languageCode, name);
+      if (audio) {
+        audioChunks.push(Buffer.from(audio as Uint8Array));
+      }
+    }
+
+    // Concatenate audio chunks (note: this is basic concatenation)
+    // For proper audio merging, you'd want to use ffmpeg or similar
+    return Buffer.concat(audioChunks);
+  }
+
+  private splitTextIntoChunks(text: string, maxBytes: number): string[] {
+    const chunks: string[] = [];
+    let currentChunk = '';
+
+    // Split by sentences to maintain natural breaks
+    const sentences = text.split(/(?<=[.!?])\s+/);
+
+    for (const sentence of sentences) {
+      const potentialChunk =
+        currentChunk + (currentChunk ? ' ' : '') + sentence;
+
+      if (Buffer.byteLength(potentialChunk, 'utf8') <= maxBytes) {
+        currentChunk = potentialChunk;
+      } else {
+        if (currentChunk) {
+          chunks.push(currentChunk);
+          currentChunk = sentence;
+        } else {
+          // Single sentence is too long, split by words
+          const words = sentence.split(' ');
+          let wordChunk = '';
+
+          for (const word of words) {
+            const potentialWordChunk =
+              wordChunk + (wordChunk ? ' ' : '') + word;
+
+            if (Buffer.byteLength(potentialWordChunk, 'utf8') <= maxBytes) {
+              wordChunk = potentialWordChunk;
+            } else {
+              if (wordChunk) {
+                chunks.push(wordChunk);
+                wordChunk = word;
+              } else {
+                // Single word is too long, truncate
+                chunks.push(word.substring(0, maxBytes));
+              }
+            }
+          }
+
+          if (wordChunk) {
+            currentChunk = wordChunk;
+          }
+        }
+      }
+    }
+
+    if (currentChunk) {
+      chunks.push(currentChunk);
+    }
+
+    return chunks;
   }
 }
