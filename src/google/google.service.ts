@@ -75,7 +75,7 @@ export class GoogleService {
       if (item.markdown && item.markdown.length > 0) {
         this.logger.log(`generating summary for ${item.link}`);
         const summary = this.llmService.generateSummary(
-          Provider.xAI,
+          Provider.OpenAI,
           item.markdown,
         );
         summary
