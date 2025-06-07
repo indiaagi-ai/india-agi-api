@@ -20,6 +20,7 @@ import {
   GoogleGenerativeAIProvider,
 } from '@ai-sdk/google';
 import { createGroq, GroqProvider } from '@ai-sdk/groq';
+import { createDeepSeek, DeepSeekProvider } from '@ai-sdk/deepseek';
 import { z } from 'zod';
 
 @Injectable()
@@ -30,6 +31,7 @@ export class LlmService {
   private xai: XaiProvider;
   private google: GoogleGenerativeAIProvider;
   private groq: GroqProvider;
+  private deepseek: DeepSeekProvider;
 
   constructor(private readonly configService: ConfigService) {
     this.logger = new Logger(LlmService.name);
@@ -47,6 +49,9 @@ export class LlmService {
     });
     this.groq = createGroq({
       apiKey: this.configService.getOrThrow('GROQ_API_KEY'),
+    });
+    this.deepseek = createDeepSeek({
+      apiKey: this.configService.getOrThrow('DEEPSEEK_API_KEY'),
     });
   }
 
@@ -71,6 +76,9 @@ export class LlmService {
         break;
       case Provider.Groq:
         model = this.groq('llama-3.1-8b-instant');
+        break;
+      case Provider.DeepSeek:
+        model = this.deepseek('deepseek-chat');
         break;
     }
 
@@ -103,7 +111,7 @@ export class LlmService {
   }
 
   async generateSummary(provider: Provider, content: string) {
-    let model: LanguageModelV1;
+    let model: LanguageModelV1 = this.openai('gpt-4.1-nano');
 
     switch (provider) {
       case Provider.OpenAI:
@@ -131,7 +139,7 @@ export class LlmService {
             .string()
             .describe('A concise summary of the provided content'),
         }),
-        prompt: `Generate a summary of the following content:\n\n ${content}`,
+        prompt: `Gentheerate a summary of  following content:\n\n ${content}`,
       });
 
       return response.object.summary;

@@ -4,4 +4,5 @@ export enum Provider {
   Google = 'Google',
   xAI = 'xAI',
   Groq = 'Groq',
+  DeepSeek = 'DeepSeek',
 }

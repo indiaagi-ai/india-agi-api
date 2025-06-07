@@ -166,7 +166,12 @@ export class TestController {
     @Query() requestDto: CollaborativeLLMRequestDto,
   ): Observable<MessageEvent<DebateHistory>> {
     const subject = new Subject<MessageEvent<DebateHistory>>();
-    const providers = [Provider.OpenAI, Provider.Google, Provider.Anthropic];
+    const providers = [
+      Provider.DeepSeek,
+      Provider.OpenAI,
+      Provider.Google,
+      Provider.Anthropic,
+    ];
     const debateHistory: DebateHistory[] = [];
     const currentDate = new Date().toISOString().split('T')[0];
 
@@ -180,6 +185,8 @@ export class TestController {
           return 'Claude';
         case Provider.xAI:
           return 'Grok';
+        case Provider.DeepSeek:
+          return 'DeepSeek';
       }
     };
 
