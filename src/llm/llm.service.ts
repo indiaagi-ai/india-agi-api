@@ -86,7 +86,7 @@ export class LlmService {
       const { text } = await generateText({
         model,
         messages,
-        temperature: 0.7,
+        temperature: 0,
         tools,
         maxSteps: 5,
         providerOptions: {

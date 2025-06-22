@@ -1,16 +1,57 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AxiosResponse } from 'axios';
 import * as cheerio from 'cheerio';
 import { NodeHtmlMarkdown } from 'node-html-markdown';
+
+interface OlostepOkResponse {
+  result: OlostepResult;
+}
+
+interface OlostepResult {
+  html_content: string;
+  markdown_content: string;
+}
 
 @Injectable()
 export class ScraperService {
   private logger: Logger;
   private nhm: NodeHtmlMarkdown;
-  constructor(private readonly httpService: HttpService) {
+
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly config: ConfigService,
+  ) {
     this.logger = new Logger(ScraperService.name);
     this.nhm = new NodeHtmlMarkdown();
+  }
+
+  async getMarkdownContentFromUsingExternalScraper(
+    pageURL: string,
+  ): Promise<string> {
+    const payload = {
+      formats: ['markdown'],
+      url_to_scrape: pageURL,
+    };
+    const headers = {
+      Authorization: `Bearer ${this.config.getOrThrow('OLOSTEP_API_KEY')}`,
+      'Content-Type': 'application/json',
+    };
+
+    try {
+      const response: AxiosResponse<OlostepOkResponse> =
+        await this.httpService.axiosRef.post(
+          this.config.getOrThrow('OLOSTEP_ENDPOINT'),
+          payload,
+          { headers },
+        );
+
+      return response.data.result.markdown_content;
+    } catch (e) {
+      this.logger.error((e as Error).message);
+      return '';
+    }
   }
 
   async getHtmlContent(pageURL: string): Promise<string> {

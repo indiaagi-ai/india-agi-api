@@ -26,7 +26,7 @@ export class GoogleService {
   async search(searchQuery: string, pageNumber: number): Promise<Item[]> {
     this.logger.verbose(`\nsearching google for: ${searchQuery}`);
     const params: SearchRequest = {
-      q: `${searchQuery} filetype:html`,
+      q: `${searchQuery}`,
       key: this.config.getOrThrow('GOOGLE_API_KEY'),
       cx: this.config.getOrThrow('GOOGLE_SEARCH_ENGINE_ID'),
       start: pageNumber * 3 + 1,
@@ -44,9 +44,14 @@ export class GoogleService {
     response.data.items = await Promise.all(
       response.data.items.map(async (item) => {
         try {
-          const html = await this.scraperService.getHtmlContent(item.link);
-          const cleaned = this.scraperService.cleanHtmlContent(html);
-          const markdown = this.scraperService.convertHtmlToMarkdown(cleaned);
+          // const html = await this.scraperService.getHtmlContent(item.link);
+          // const cleaned = this.scraperService.cleanHtmlContent(html);
+          // const markdown = this.scraperService.convertHtmlToMarkdown(cleaned);
+
+          const markdown =
+            await this.scraperService.getMarkdownContentFromUsingExternalScraper(
+              item.link,
+            );
 
           return {
             title: item.pagemap?.metatags?.[0]?.['og:title'] ?? item.title,
