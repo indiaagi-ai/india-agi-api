@@ -161,6 +161,12 @@ export class TestController {
     }
   }
 
+  @Get('relevant-blogs')
+  async getRelevantBlogs(@Query('text') text: string) {
+    const embeddings = await this.llmService.generateEmbeddings(text);
+    return await this.llmService.getRelevantBlogs(embeddings);
+  }
+
   @Sse('sse')
   sse(
     @Query() requestDto: CollaborativeLLMRequestDto,
@@ -341,18 +347,32 @@ Your response should flow naturally as part of the existing conversation without
                     .describe(
                       'The page number of search results to retrieve. Starts at 0 for the first page of results.',
                     ),
+                  blog_search_description: z
+                    .string()
+                    .describe(
+                      'A brief descriptive summary of the topic/concept being searched. This will be used to find semantically similar content in my blog collection.',
+                    ),
                 }),
-                execute: async ({ search_query, page_number }) => {
+                execute: async ({
+                  search_query,
+                  page_number,
+                  blog_search_description,
+                }) => {
                   const searchResponse = await this.googleService.search(
                     search_query,
                     page_number,
                   );
+                  const embeddings = await this.llmService.generateEmbeddings(
+                    blog_search_description,
+                  );
+                  const relevantBlogs =
+                    await this.llmService.getRelevantBlogs(embeddings);
                   const searchHistory: DebateHistory = {
                     type: HistoryType.internetSearch,
                     model: provider,
                     internetSearch: {
                       searchQuery: search_query,
-                      searchResponse,
+                      searchResponse: [...searchResponse, ...relevantBlogs],
                     },
                   };
                   debateHistory.push(searchHistory);

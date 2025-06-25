@@ -1,6 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Provider } from './interfaces';
+import {
+  Provider,
+  EmbeddingsRequest,
+  EmbeddingsResponse,
+  BlogMetadata,
+} from './interfaces';
 import {
   CoreMessage,
   LanguageModelV1,
@@ -22,6 +27,11 @@ import {
 import { createGroq, GroqProvider } from '@ai-sdk/groq';
 import { createDeepSeek, DeepSeekProvider } from '@ai-sdk/deepseek';
 import { z } from 'zod';
+import { HttpService } from '@nestjs/axios';
+import { AxiosResponse } from 'axios';
+import { Pinecone } from '@pinecone-database/pinecone';
+import { Item } from 'src/google/interfaces';
+import { ScraperService } from 'src/scraper/scraper.service';
 
 @Injectable()
 export class LlmService {
@@ -32,8 +42,13 @@ export class LlmService {
   private google: GoogleGenerativeAIProvider;
   private groq: GroqProvider;
   private deepseek: DeepSeekProvider;
+  private pinecone: Pinecone;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly httpService: HttpService,
+    private readonly scraperService: ScraperService,
+  ) {
     this.logger = new Logger(LlmService.name);
     this.openai = createOpenAI({
       apiKey: this.configService.getOrThrow('OPENAI_API_KEY'),
@@ -52,6 +67,9 @@ export class LlmService {
     });
     this.deepseek = createDeepSeek({
       apiKey: this.configService.getOrThrow('DEEPSEEK_API_KEY'),
+    });
+    this.pinecone = new Pinecone({
+      apiKey: this.configService.getOrThrow('PINECONE_API_KEY'),
     });
   }
 
@@ -146,6 +164,70 @@ export class LlmService {
     } catch (error) {
       this.logger.error('Error generating summary:', error);
       throw new Error('Failed to generate content summary');
+    }
+  }
+
+  async generateEmbeddings(text: string) {
+    try {
+      const body: EmbeddingsRequest = {
+        textContent: text,
+      };
+      const response: AxiosResponse<EmbeddingsResponse> =
+        await this.httpService.axiosRef.post(
+          this.configService.getOrThrow('EMBEDDINGS_ENDPOINT'),
+          body,
+        );
+      return response.data.embeddings;
+    } catch (e) {
+      this.logger.log((e as Error).message);
+      return [];
+    }
+  }
+
+  async getRelevantBlogs(embeddings: number[]) {
+    try {
+      const db = this.pinecone.index(
+        this.configService.getOrThrow('PINECONE_DB'),
+      );
+
+      let responses = (
+        await db.query({
+          topK: 5,
+          vector: embeddings,
+          includeValues: false,
+          includeMetadata: true,
+        })
+      ).matches;
+
+      responses = responses.filter((r) => r.score && r.score >= 0.7);
+
+      let items: Item[] = [];
+      items = await Promise.all(
+        responses.map(async (item) => {
+          const metadata = item.metadata as unknown as BlogMetadata;
+          // const html = await this.scraperService.getHtmlContent(metadata.link);
+          // const cleaned = this.scraperService.cleanHtmlContent(html);
+          // const markdown = this.scraperService.convertHtmlToMarkdown(cleaned);
+
+          const markdown =
+            await this.scraperService.getMarkdownContentFromUsingExternalScraper(
+              metadata.link,
+            );
+
+          return {
+            title: metadata.link,
+            link: metadata.link,
+            snippet: '',
+            content: markdown,
+            mardown: markdown,
+          };
+        }),
+      );
+
+      return items;
+    } catch (e) {
+      this.logger.error((e as Error).message);
+      return [];
     }
   }
 }

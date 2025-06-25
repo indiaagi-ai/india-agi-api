@@ -56,6 +56,9 @@ importers:
       '@nestjs/websockets':
         specifier: ^11.1.0
         version: 11.1.0(@nestjs/common@11.0.12(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.0.12)(@nestjs/platform-socket.io@11.1.0)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@pinecone-database/pinecone':
+        specifier: ^6.1.1
+        version: 6.1.1
       ai:
         specifier: ^4.2.9
         version: 4.2.9(react@19.1.0)(zod@3.24.2)
@@ -1047,6 +1050,10 @@ packages:
   '@opentelemetry/api@1.9.0':
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
     engines: {node: '>=8.0.0'}
+
+  '@pinecone-database/pinecone@6.1.1':
+    resolution: {integrity: sha512-wstOV6gVdShi1PMrrmmgj2md5NwoVL3SS4brOiuxlGv2m0kiYBSxkvi6cx8S4dWkA/mfi1fzwmZ2YX64K+yaMA==}
+    engines: {node: '>=18.0.0'}
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
@@ -5238,6 +5245,8 @@ snapshots:
       consola: 3.4.2
 
   '@opentelemetry/api@1.9.0': {}
+
+  '@pinecone-database/pinecone@6.1.1': {}
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
