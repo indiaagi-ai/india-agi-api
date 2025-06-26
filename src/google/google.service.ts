@@ -79,14 +79,15 @@ export class GoogleService {
     const summaryPromises = response.data.items.map(async (item) => {
       if (item.markdown && item.markdown.length > 0) {
         this.logger.log(`generating summary for ${item.link}`);
-        const summary = this.llmService.generateSummary(
-          Provider.OpenAI,
-          item.markdown,
-        );
-        summary
-          .then((summaryRes) => this.logger.log(summaryRes))
-          .catch(() => {});
-        return summary;
+        try {
+          const summary = await this.llmService.generateSummary(
+            Provider.OpenAI,
+            item.markdown,
+          );
+          return summary.summary;
+        } catch {
+          return '';
+        }
       }
       return '';
     });
