@@ -84,7 +84,7 @@ export class LlmService {
     let model: LanguageModelV1;
     switch (provider) {
       case Provider.OpenAI:
-        model = this.openai('gpt-4o-mini');
+        model = this.openai('gpt-5-mini');
         break;
       case Provider.Anthropic:
         model = this.anthropic('claude-3-haiku-20240307');
@@ -107,9 +107,9 @@ export class LlmService {
       const { text } = await generateText({
         model,
         messages,
-        temperature: 0,
+        temperature: provider === Provider.OpenAI ? 1 : 0,
         tools,
-        maxSteps: 5,
+        maxSteps: 3,
         providerOptions: {
           openai: {
             parallelToolCalls: false,
