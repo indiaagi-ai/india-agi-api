@@ -11,6 +11,7 @@ import { OnlineCounterModule } from './online-counter/online-counter.module';
 import { CounterModule } from './counter/counter.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GithubModule } from './github/github.module';
+import { PerplexityModule } from './perplexity/perplexity.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { GithubModule } from './github/github.module';
     OnlineCounterModule,
     CounterModule,
     GithubModule,
+    PerplexityModule,
   ],
   controllers: [TestController],
   providers: [AppService],
