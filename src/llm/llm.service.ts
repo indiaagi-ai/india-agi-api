@@ -18,11 +18,16 @@ import {
   OpenAIProvider,
   OpenAIResponsesProviderOptions,
 } from '@ai-sdk/openai';
-import { createAnthropic, AnthropicProvider } from '@ai-sdk/anthropic';
+import {
+  createAnthropic,
+  AnthropicProvider,
+  AnthropicProviderOptions,
+} from '@ai-sdk/anthropic';
 import { createXai, XaiProvider } from '@ai-sdk/xai';
 import {
   createGoogleGenerativeAI,
   GoogleGenerativeAIProvider,
+  GoogleGenerativeAIProviderOptions,
 } from '@ai-sdk/google';
 import { createGroq, GroqProvider } from '@ai-sdk/groq';
 import { createDeepSeek, DeepSeekProvider } from '@ai-sdk/deepseek';
@@ -93,7 +98,7 @@ export class LlmService {
         model = this.xai('grok-3-mini-beta');
         break;
       case Provider.Google:
-        model = this.google('gemini-2.0-flash-lite-preview-02-05', {});
+        model = this.google('gemini-2.5-flash-lite', {});
         break;
       case Provider.Groq:
         model = this.groq('llama-3.1-8b-instant');
@@ -113,7 +118,13 @@ export class LlmService {
         providerOptions: {
           openai: {
             parallelToolCalls: false,
+            reasoningEffort: 'minimal',
           } satisfies OpenAIResponsesProviderOptions,
+          anthropic: {
+            thinking: {
+              type: 'disabled',
+            },
+          } satisfies AnthropicProviderOptions,
         },
       });
       const responseText = text;

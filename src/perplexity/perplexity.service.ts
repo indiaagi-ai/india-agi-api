@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Perplexity from '@perplexity-ai/perplexity_ai';
+import { Item } from 'src/google/interfaces';
 
 @Injectable()
 export class PerplexityService {
@@ -26,7 +27,16 @@ export class PerplexityService {
         max_tokens_per_page: 2048,
         search_domain_filter: domains,
       });
-      return search.results;
+      return search.results.map((sr) => {
+        const item: Item = {
+          link: sr.url,
+          title: sr.title,
+          snippet: sr.snippet,
+          markdown: sr.snippet,
+        };
+
+        return item;
+      });
     } catch (e: unknown) {
       if (e instanceof Error) {
         this.logger.error(e.message);

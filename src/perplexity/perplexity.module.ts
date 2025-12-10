@@ -7,5 +7,6 @@ import { ConfigModule } from '@nestjs/config';
   imports: [ConfigModule],
   controllers: [PerplexityController],
   providers: [PerplexityService],
+  exports: [PerplexityService],
 })
 export class PerplexityModule {}
